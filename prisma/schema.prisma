@@ -1,0 +1,62 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(ATTENDEE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organizedEvents Event[]        @relation("OrganizerEvents")
+  registrations   Registration[]
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  place       String   // ← replace description with place
+  date        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizerId   String
+  organizer     User           @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+
+  @@map("events")
+}
+
+model Registration {
+  id         String   @id @default(uuid())
+  registeredAt DateTime @default(now())
+
+  // Relations
+  userId  String
+  eventId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate registrations
+  @@unique([userId, eventId])
+  @@map("registrations")
+}
+
+enum Role {
+  ORGANIZER
+  ATTENDEE
+}
